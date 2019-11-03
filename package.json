@@ -1,6 +1,6 @@
 {
   "name": "neurons-animation",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "neurons-animation",
   "author": "appleskiller@163.com",
   "license": "MIT",
@@ -13,10 +13,11 @@
     "test-once": "karma start --single-run true",
     "build": "node script/build.js",
     "tag": "node script/tag.js",
+    "update-deps": "node script/update-deps.js",
     "release": "node script/release.js"
   },
   "dependencies": {
-    "neurons-utils": "^1.0.0"
+    "neurons-utils": "^1.0.1"
   },
   "devDependencies": {
     "@types/jasmine": "^3.3.16",
