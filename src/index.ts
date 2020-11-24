@@ -37,3 +37,11 @@ export function tween(duration: number, tweening: TweeningFunction, done?: Funct
         return () => { clearFunc(); };
     }
 }
+
+export {
+    easingFunctions
+} from './easing';
+export {
+    Transition,
+    AttributesTransition,
+} from './transition';
