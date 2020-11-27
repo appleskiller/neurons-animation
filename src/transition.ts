@@ -88,7 +88,9 @@ export class TransitionBase<T> implements ITrasition<T> {
         if (this._from === value) return this;
         // 立即结束到value
         const to = this._to;
-        this.complete(value);
+        if (this._runningStates) {
+            this.complete(value);
+        }
         this._from = value;
         this._to = to;
         this._tryRun();
@@ -218,12 +220,15 @@ export class AttributesTransition extends TransitionBase<Attributes> {
             const ret: Attributes = {};
             Object.keys(to).forEach(key => {
                 const f = from[key], t = to[key];
-                if (f === t) return;
-                if (f > t) {
-                    ret[key] = f - v * (f - t);
+                if (f !== t) {
+                    if (f > t) {
+                        ret[key] = f - v * (f - t);
+                    } else {
+                        ret[key] = f + v * (t - f);
+                    }
                 } else {
-                    ret[key] = f + v * (t - f);
-                }
+                    ret[key] = f;
+                };
             })
             return ret;
         }
