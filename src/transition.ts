@@ -180,8 +180,8 @@ export class TransitionBase<T> implements ITrasition<T> {
 }
 
 export class Transition extends TransitionBase<number> {
-    constructor(ticker?: ITicker){
-        super(ticker);
+    static create(ticker: ITicker): Transition {
+        return new Transition(ticker);
     }
     protected _tween(from: number, to: number, t, easing): number {
         if (t >= 1) {
@@ -201,6 +201,9 @@ export class Transition extends TransitionBase<number> {
 type Attributes = {[key: string]: number}
 
 export class AttributesTransition extends TransitionBase<Attributes> {
+    static create(ticker: ITicker): AttributesTransition {
+        return new AttributesTransition(ticker);
+    }
     protected _equals(newValue: Attributes, oldValue: Attributes): boolean {
         if (newValue === oldValue) return true;
         const newKeys = Object.keys(newValue);
