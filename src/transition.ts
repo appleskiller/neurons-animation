@@ -3,11 +3,12 @@ import { easingFunctions } from './easing';
 
 export interface ITrasition<T> {
     duration(value: number): ITrasition<T>;
-    tick(callback: (value: T) => void): ITrasition<T>;
     from(value: T): ITrasition<T>;
     to(value: T): ITrasition<T>;
     easing(easing): ITrasition<T>;
     complete(value?: T): ITrasition<T>;
+    onTick(callback: (value: T) => void): ITrasition<T>;
+    onComplete(callback: (value: T) => void): ITrasition<T>;
     destroy(): void;
 }
 
@@ -50,6 +51,7 @@ export class TransitionBase<T> implements ITrasition<T> {
     private _duration: number;
     private _easing;
     private _callback: (value: T) => void;
+    private _completedCallback: (value: T) => void;
     
     private _runningStates: IRunningStates;
     private _cancelLoop;
@@ -66,21 +68,28 @@ export class TransitionBase<T> implements ITrasition<T> {
         this._tryRun();
         return this;
     }
-    tick(callback: (value: T) => void) {
+    onTick(callback: (value: T) => void) {
         if (this._callback === callback) return this;
         this._callback = callback;
         this._tryRun();
+        return this;
+    }
+    onComplete(callback: (value: T) => void) {
+        if (this._completedCallback === callback) return this;
+        this._completedCallback = callback;
         return this;
     }
     complete(value?: T) {
         if (arguments.length) {
             this._setComplete(value);
             this._callback(value);
+            this._completedCallback && this._completedCallback(value);
         } else if (this._runningStates) {
             const t = ((new Date()).getTime() - this._runningStates.startTime) / this._runningStates.duration;
             const current = this._tween(this._runningStates.from, this._runningStates.to, t, this._runningStates.easing);
             this._setComplete(current);
             this._callback(current);
+            this._completedCallback && this._completedCallback(value);
         }
         return this;
     }
@@ -110,6 +119,9 @@ export class TransitionBase<T> implements ITrasition<T> {
                     this._from = current;
                     this._to = value;
                 }
+                // 回调一次
+                this._callback(current);
+                this._completedCallback && this._completedCallback(value);
             } else {
                 // 在剩余的时间内，缓动到新的目标点
                 this._from = current;
@@ -118,9 +130,9 @@ export class TransitionBase<T> implements ITrasition<T> {
                 this._runningStates.duration = this._runningStates.duration - t;
                 this._runningStates.from = this._from;
                 this._runningStates.to = this._to;
+                // 回调一次
+                this._callback(current);
             }
-            // 回调一次
-            this._callback(current);
         }
         this._tryRun();
         return this;
@@ -159,8 +171,11 @@ export class TransitionBase<T> implements ITrasition<T> {
         const value = this._tween(this._runningStates.from, this._runningStates.to, t, this._runningStates.easing);
         if (t >= 1) {
             this._setComplete(value);
+            this._callback(value);
+            this._completedCallback && this._completedCallback(value);
+        } else {
+            this._callback(value);
         }
-        this._callback(value);
     }
     protected _setComplete(value: T) {
         this._runningStates && this._runningStates.cancelLoop();
