@@ -15,6 +15,7 @@ export interface ITrasition<T> {
 type UnregisterFrameTickHandle = () => void
 interface ITicker {
     onTick(callback): UnregisterFrameTickHandle;
+    once(callback): UnregisterFrameTickHandle;
 }
 interface IRunningStates {
     startTime: number;
@@ -37,6 +38,9 @@ const defaultTicker = {
             canelFn();
         };
     },
+    once: (callback) => {
+        return requestFrame(callback);
+    },
 }
 
 export class TransitionBase<T> implements ITrasition<T> {
@@ -54,7 +58,6 @@ export class TransitionBase<T> implements ITrasition<T> {
     private _completedCallback: (value: T) => void;
     
     private _runningStates: IRunningStates;
-    private _cancelLoop;
 
     duration(value: number) {
         if (this._duration === value) return this;
@@ -138,8 +141,6 @@ export class TransitionBase<T> implements ITrasition<T> {
         return this;
     }
     destroy() {
-        this._cancelLoop && this._cancelLoop();
-        this._cancelLoop = null;
         this._runningStates && this._runningStates.cancelLoop();
         this._runningStates = null;
     }
@@ -149,20 +150,31 @@ export class TransitionBase<T> implements ITrasition<T> {
     protected _assert() {
         return this._from !== undefined
             && this._to !== undefined
-            && !this._equals(this._from , this._to)
             && this._easing !== undefined
             && this._callback !== undefined
             && this._duration !== undefined;
     }
     protected _tryRun() {
         if (this._runningStates || !this._assert()) return;
+        const cancelLoop = this._equals(this._from , this._to)
+            ? this._ticker.once(() => {
+                if (!this._runningStates) return;
+                const value = this._runningStates.to;
+                this._setComplete(value);
+                // 回调一次
+                this._callback(value);
+                this._completedCallback && this._completedCallback(value);
+            })
+            : this._ticker.onTick(
+                this._animate
+            );
         this._runningStates = {
             duration: this._duration,
             easing: this._easing,
             from: this._from,
             to: this._to,
             startTime: (new Date()).getTime(),
-            cancelLoop: this._ticker.onTick(this._animate),
+            cancelLoop: cancelLoop,
         }
     }
     protected _onTick() {
@@ -221,6 +233,14 @@ export class AttributesTransition extends TransitionBase<Attributes> {
     static create(ticker: ITicker): AttributesTransition {
         return new AttributesTransition(ticker);
     }
+    from(value: Attributes) {
+        // 浅复制
+        return super.from(value ? {...value} : value);
+    }
+    to(value: Attributes) {
+        // 浅复制
+        return super.to(value ? {...value} : value);
+    }
     protected _equals(newValue: Attributes, oldValue: Attributes): boolean {
         if (newValue === oldValue) return true;
         const newKeys = Object.keys(newValue);
@@ -236,11 +256,10 @@ export class AttributesTransition extends TransitionBase<Attributes> {
             Object.keys(to).forEach(key => {
                 const f = from[key], t = to[key];
                 if (f !== t) {
-                    if (f > t) {
-                        ret[key] = f - v * (f - t);
-                    } else {
-                        ret[key] = f + v * (t - f);
-                    }
+                    if (!isDefined(f)) ret[key] = t;
+                    else if (!isDefined(t)) ret[key] = f;
+                    else if (f > t) ret[key] = f - v * (f - t);
+                    else ret[key] = f + v * (t - f);
                 } else {
                     ret[key] = f;
                 };

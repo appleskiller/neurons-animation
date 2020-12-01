@@ -71,7 +71,7 @@ export const easingFunctions = {
     easeInCirc: function (t) {
         return 1 - Math.sqrt(1 - t * t);
     },
-    outCirc: function (t) {
+    easeOutCirc: function (t) {
         return Math.sqrt(1 - (--t * t));
     },
     easeInOutCirc: function (t) {
