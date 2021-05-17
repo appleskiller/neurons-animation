@@ -1,4 +1,5 @@
 import { isDefined, isEmpty, requestFrame } from 'neurons-utils';
+import { cssHextoRGBAArray, rgbToCSSRGB, rgbToHexPound, toRGBAArray, xHextoRGBAArray } from './colorutils';
 import { easingFunctions } from './easing';
 
 export interface ITrasition<T> {
@@ -227,7 +228,7 @@ export class Transition extends TransitionBase<number> {
     }
 }
 
-type Attributes = {[key: string]: number}
+type Attributes = {[key: string]: any}
 
 export class AttributesTransition extends TransitionBase<Attributes> {
     static create(ticker: ITicker): AttributesTransition {
@@ -253,13 +254,28 @@ export class AttributesTransition extends TransitionBase<Attributes> {
         } else {
             const v = easing(t);
             const ret: Attributes = {};
+            let ff, tt;
             Object.keys(to).forEach(key => {
                 const f = from[key], t = to[key];
                 if (f !== t) {
                     if (!isDefined(f)) ret[key] = t;
                     else if (!isDefined(t)) ret[key] = f;
-                    else if (f > t) ret[key] = f - v * (f - t);
-                    else ret[key] = f + v * (t - f);
+                    else {
+                        if (this.isColorString(f)) {
+                            ff = f;
+                            tt = t;
+                            if (this.isRgbaColor(ff)) {
+                                ret[key] = this.calcRgbaColor(ff, tt, v);
+                            } else {
+                                ret[key] = this.calcRgbColor(ff, tt, v);
+                            }
+                        } else {
+                            ff = f as number;
+                            tt = t as number;
+                            if (f > t) ret[key] = ff - v * (ff - tt);
+                            else ret[key] = ff + v * (tt - ff);
+                        }
+                    }
                 } else {
                     ret[key] = f;
                 };
@@ -267,7 +283,45 @@ export class AttributesTransition extends TransitionBase<Attributes> {
             return ret;
         }
     }
+    private calcRgbaColor(from: string, to: string, v) {
+        const fromArr = toRGBAArray(from);
+        const toArr = toRGBAArray(to);
+        let r = fromArr[0], g = fromArr[1], b = fromArr[2], a = fromArr[3];
+        // r
+        if (r > toArr[0]) r = r - v * (r - toArr[0]);
+        else r = r + v * (toArr[0] - r);
+        // g
+        if (g > toArr[1]) g = g - v * (g - toArr[1]);
+        else g = g + v * (toArr[1] - g);
+        // b
+        if (b > toArr[2]) b = b - v * (b - toArr[2]);
+        else b = b + v * (toArr[2] - b);
+        // a
+        if (a > toArr[3]) a = a - v * (a - toArr[3]);
+        else a = a + v * (toArr[3] - a);
+        return rgbToCSSRGB(r, g, b, a);
+    }
+    private calcRgbColor(from: string, to: string, v) {
+        const fromArr = toRGBAArray(from);
+        const toArr = toRGBAArray(to);
+        let r = fromArr[0], g = fromArr[1], b = fromArr[2], a = fromArr[3];
+        // r
+        if (r > toArr[0]) r = r - v * (r - toArr[0]);
+        else r = r + v * (toArr[0] - r);
+        // g
+        if (g > toArr[1]) g = g - v * (g - toArr[1]);
+        else g = g + v * (toArr[1] - g);
+        // b
+        if (b > toArr[2]) b = b - v * (b - toArr[2]);
+        else b = b + v * (toArr[2] - b);
+        return rgbToHexPound(r, g, b);
+    }
+    private isColorString(value: any): boolean {
+        if (!value || typeof value !== 'string') return false;
+        const char = value.charAt(0);
+        return char === '#' || char === 'r';
+    }
+    private isRgbaColor(value: string): boolean {
+        return value.length >= 9;
+    }
 }
-
-
-
