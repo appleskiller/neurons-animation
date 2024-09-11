@@ -17,7 +17,7 @@
     "release": "node script/release.js"
   },
   "dependencies": {
-    "neurons-utils": "1.0.38"
+    "neurons-utils": "^1.0.39"
   },
   "devDependencies": {
     "@types/jasmine": "^3.3.16",
